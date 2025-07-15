@@ -1,3 +1,5 @@
 config.py
 venv/
 mitbbs
+accounts1.txt
+accounts.json
