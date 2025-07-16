@@ -2,9 +2,9 @@ import requests
 import json
 import time
 
-BASE_URL = "https://cnnewyorker.com"  # 替换成你的域名，无斜杠
-INPUT_FILE = "accounts1.txt"
-OUTPUT_FILE = "accounts.json"
+BASE_URL = "https://cnnewyorker.com"  # ← 你的 Flarum 域名，无斜杠
+INPUT_FILE = "accounts1.txt"          # ← 每行格式: email,password
+OUTPUT_FILE = "accounts.json"         # ← 输出为 list 格式
 
 def get_token(email, password):
     url = f"{BASE_URL}/api/token"
@@ -18,32 +18,41 @@ def get_token(email, password):
         response.raise_for_status()
         data = response.json()
         return {
+            "username": email,
             "userId": data.get("userId"),
             "token": data.get("token")
         }
     except Exception as e:
-        print(f"[❌] {email} 登录失败: {e}")
+        print(f"[❌] 登录失败：{email} → {e}")
         return None
 
 def main():
-    tokens = {}
-    with open(INPUT_FILE, "r") as f:
+    result = []
+    seen = set()
+
+    with open(INPUT_FILE, "r", encoding="utf-8") as f:
         lines = f.readlines()
-    
+
     for line in lines:
         line = line.strip()
         if not line or ',' not in line:
             continue
-        email, password = line.split(',', 1)
-        print(f"🔑 正在获取: {email}")
-        result = get_token(email.strip(), password.strip())
-        if result:
-            tokens[email] = result
-        time.sleep(1)  # 可选：避免触发防火墙限制
 
-    with open(OUTPUT_FILE, "w") as f:
-        json.dump(tokens, f, indent=2)
-    print(f"\n✅ 所有 token 已保存到 {OUTPUT_FILE}")
+        email, password = [part.strip() for part in line.split(',', 1)]
+        if email in seen:
+            continue
+        seen.add(email)
+
+        print(f"🔐 登录中: {email}")
+        token_data = get_token(email, password)
+        if token_data:
+            result.append(token_data)
+        time.sleep(1)
+
+    with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
+        json.dump(result, f, indent=2, ensure_ascii=False)
+
+    print(f"\n✅ 共 {len(result)} 个 token 已保存到 {OUTPUT_FILE}")
 
 if __name__ == "__main__":
     main()
